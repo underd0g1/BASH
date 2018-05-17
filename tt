@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+
+#TITLE:  tt (tile tinter)
+#AUTHOR: nxll <nxll@teknik.io>
+#WHATDO: Colorize a transparent image and set it as a wallpaper.
+
+# For use with images from here (https://www.transparenttextures.com/)
+# However you could make your own so long as the background is transparent.
+
+#Requirments:
+# * imagemagick
+# * coreutils
+# * hsetroot <https://github.com/elmiko/hsetroot>
+# * sxiv <https://github.com/muennich/sxiv> (optional for selection)
+
+declare opt imgdir wall color img imgsize
+
+opt=$1
+imgdir="$HOME/images/tiles"
+wall="$HOME/.ttwall"
+color=$(cat $HOME/.Xresources | awk '/\*color8:/ {print $2}')
+tmp=$(mktemp --suffix=.png)
+
+generate() {
+	convert -size "$imgsize" xc:"$color" "$tmp"
+	convert "$tmp" "$img" -gravity center -composite /tmp/wall.png	
+
+	rm "$tmp"
+	hsetroot -tile /tmp/wall.png
+}
+
+usage() {
+echo -e "\nUSAGE:
+tt [-f | -file <path>]
+	Colors and applies the given image.
+
+tt [-s | -select]
+	Same as above but with visual selection.
+	Mark your image and quit, requires sxiv.
+
+tt [-r | -reload]
+	Reloads the last set image from $wall
+
+tt [-h | -help]
+	Display this dialogue.\n"
+}
+
+case $opt in
+	-f|-file)
+		if [[ -f $2 ]];then
+			img=$2
+			shift
+			imgsize=$(identify -format '%wx%h' "$img")
+			realpath "$img" > "$wall"
+			generate
+		else
+			echo "File does not exist, please choose an existing file"
+		fi
+		;;
+	-s|-select)
+		sxiv -tor "$imgdir" > "$wall"
+		img=$(< "$wall")
+		imgsize=$(identify -format '%wx%h' "$img")
+		generate
+		;;
+	-r|-reload)
+		if [[ -f $wall ]]; then
+			img=$(< "$wall")
+			imgsize=$(identify -format '%wx%h' "$img")
+			generate
+		else
+			echo -e "\nFirst select an image. Type 'tt -h'.\n"
+		fi
+	;;
+	-h|-help) usage ;;
+	*) usage ;;
+esac

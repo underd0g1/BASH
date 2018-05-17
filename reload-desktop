@@ -1,0 +1,138 @@
+#!/usr/bin/env bash
+# Script Name: reload-desktop
+# Written by fullsalvo
+# Contains the commands to restart programs after whizkers makes changes
+
+reload_config=~/.rhisk
+
+declare usefont=0
+declare tmux_conf=~/.tmux.conf
+declare xres=~/.Xresources
+
+# Functions
+
+use-xresources ()
+{
+	tr -d ' \t' | sed -n '
+s/.*background:/\x1b]11;/p
+s/.*foreground:/\x1b]10;/p
+s/.*cursorColor:/\x1b]12;/p
+s/.*borderColor:/\x1b]708;/p
+s/.*highlightColor:/\x1b]17;/p
+s/.*color\([0-9][^:]*\):/\x1b]4;\1;/p
+' | tr \\n \\a
+}
+
+use-xresourcesfont ()
+{
+    tr -d ' \t' | sed -n '
+s/URxvt.font:/\x1b]50;/p
+s/.*background:/\x1b]11;/p
+s/.*foreground:/\x1b]10;/p
+s/.*cursorColor:/\x1b]12;/p
+s/.*borderColor:/\x1b]708;/p
+s/.*highlightColor:/\x1b]17;/p
+s/.*color\([0-9][^:]*\):/\x1b]4;\1;/p
+' | tr \\n \\a
+}
+
+getwm ()
+{
+	wms=( 2bwm 2wm 9wm aewm afterstep ahwm alopex amiwm antiwm awesome blackbox bspwm catwm clfswm ctwm cwm dminiwm dragonflywm dwm echinus \
+	euclid-wm evilpoison evilwm fluxbox flwm fvwm-crystal goomwwm hcwm herbstluftwm i3 icewm jwm karmen larswm lwm matwm2 mcwm monsterwm \
+	musca notion nwm olwm openbox oroborus pekwm ratpoison sapphire sawfish sscrotwm sithwm smallwm snapwm spectrwm stumpwm subtle tfwm tinywm tritium twm \
+	uwm vtwm w9wm weewm wind windowlab wm2 wmaker wmfs wmii wmx xfwm4 xmonad xoat yeahwm )
+
+	for wm in ${wms[@]}; do          # pgrep through wmname array
+	pid=$(pgrep -x -u $USER $wm) # if found, this wmname has running process
+		if [[ "$pid" ]]; then
+			echo "$wm" > /dev/null 2>&1
+			break
+		fi
+	done
+}
+
+# Main
+
+main ()
+{
+	# Read config file
+	[ -f "$reload_config" ] && source "$reload_config"
+
+	# Programs that require a keypress to reload configs
+	n=0
+	for prog in "${reload_key_programs[@]}"; do
+		for window in `xdotool search --class $prog`; do
+ 			xdotool key --window $window ${reload_keypresses[n]} &>/dev/null &
+		done
+		n=n+1
+	done
+
+	# Programs
+	# User-specified programs
+	for prog in "${reload_programs[@]}"; do
+		killall "${prog%% *}"
+		$prog &>/dev/null &
+	done &
+
+	# Commands
+	for com in "${reload_commands[@]}"; do
+		$com &>/dev/null &
+	done
+
+	# Reload X terminal emulator configuration live
+	if [[ -n $xres ]]; then
+		xrdb "$xres" &>/dev/null &
+		if [ $usefont -eq 0 ]; then
+			for pts in /dev/pts/*; do
+				(echo -n "$(use-xresources < "$xres")" > "$pts") 2>/dev/null &
+			done &
+		else
+			for pts in /dev/pts/*; do
+				(echo -n "$(use-xresourcesfont < "$xres")" > "$pts") 2>/dev/null &
+			done &
+		fi
+	fi
+
+	# Window Manager {{{
+	# Reload window manager
+	getwm
+	case "$wm" in
+		Openbox)
+			openbox --reconfigure &>/dev/null &
+			;;
+		herbstluftwm)
+			herbstclient reload &>/dev/null &
+			;;
+		2bwm)
+			#cd $HOME/src/2bwm/
+			#make clean &>/dev/null
+			#make &>/dev/null
+			#make install &>/dev/null
+			xdotool key Super+q &>/dev/null
+			;;
+	esac
+
+	# Reload Wallpaper
+	#$HOME/bin/ws -wallpaper
+	$HOME/bin/tt -r > /dev/null 2>&1
+
+	# tmux
+	# Reload tmux colors
+	if [[ -n "$tmux_conf" ]]; then
+		tmux source-file "$tmux_conf" &>/dev/null &
+	fi
+
+	# sxiv
+	#sxivconf="$HOME/src/sxiv/"
+	#if [[ -f "$sxivconf/config.h" ]]; then
+	#	cd $sxivconf 
+	#	make clean &>/dev/null
+	#	make &>/dev/null
+	#	make install &>/dev/null
+	#fi
+
+	notify-send "THEME LOADED"
+}
+
+main

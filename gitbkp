@@ -1,0 +1,65 @@
+#!/bin/bash
+#BACKUP REPOS TO GITHUB
+
+cph="cp -r $HOME"
+dotfiles="$HOME/.git/dotfiles"
+scripts="$HOME/.git/scripts"
+gitio="$HOME/.git/nxll.github.io"
+
+case $1 in
+-dotfiles)
+	$cph/.zshrc $dotfiles/
+	$cph/.vimrc $dotfiles/
+	$cph/.interrobangrc $dotfiles/
+	$cph/.tmux.conf $dotfiles/
+	$cph/.xinitrc $dotfiles/
+	$cph/.Xresources $dotfiles/
+	$cph/.compton.conf $dotfiles/
+	$cph/.zlogin $dotfiles/
+
+	$cph/.vim/colors $dotfiles/.vim/
+	$cph/.ncmpcpp/config $dotfiles/.ncmpcpp/
+	$cph/.weechat/weechat.conf $dotfiles/.weechat/
+
+	$cph/.config/dunst/ $dotfiles/.config/
+	$cph/.config/herbstluftwm/ $dotfiles/.config/
+	$cph/.config/windowchef/ $dotfiles/.config/
+	rm -rf $HOME/.config/zenbu/__pycache__
+	$cph/.config/zenbu/ $dotfiles/.config/
+	$cph/.config/mpd/mpd.conf $dotfiles/.config/mpd/
+	$cph/.config/mpv/ $dotfiles/.config/
+	$cph/.config/zathura/ $dotfiles/.config/
+	$cph/.config/cava/config $dotfiles/.config/cava/
+	$cph/.config/user-dirs.dirs $dotfiles/.config/
+
+	#PUSH
+	cd $dotfiles
+	git add .
+	git commit -m phresh
+	git push ghdots master
+	git push tdots master
+	notify-send "DOTFILES REPO UP TO DATE"
+	cd
+	;;
+-scripts)
+	$cph/bin/* $scripts/
+
+	#PUSH
+	cd $scripts
+	git add .
+	git commit -m phresh
+	git push ghscripts master
+	git push tscripts master
+	notify-send "SCRIPTS REPO UP TO DATE"
+	cd
+	;;
+-gitio)
+	#PUSH
+	cd $gitio
+	git add .
+	git commit -m phresh
+	git push gitio master
+	notify-send "GITIO UP TO DATE"
+	;;
+*) echo "You modified me to push -dotfiles, -scripts or -gitio" ;;
+esac
