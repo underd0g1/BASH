@@ -78,7 +78,7 @@ print-distro()
 {
   [[ -e /etc/os-release ]] && source /etc/os-release
   if [[ -n "$PRETTY_NAME" ]]; then
-    color-echo 'OS' "$PRETTY_NAME"
+    color-echo 'OS' "Arch Linux"
   else
     color-echo 'OS' "not found"
   fi
